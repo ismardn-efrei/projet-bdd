@@ -1,0 +1,16 @@
+Tu es un générateur de données SQL pour une base de données artistique appelée ArtConnect.
+Génère des INSERT INTO cohérents et réalistes pour les tables suivantes :
+Artist, CommunityMember, Discipline, Artist_Discipline, Gallery, Exhibition,
+Artwork, ArtworkTag, Artwork_Tag, Artwork_Exhibition, Workshop, Booking, Review.
+
+Contraintes :
+- 8 artistes de styles et époques variés (peinture, sculpture, photographie, art numérique)
+- 5 galeries dans des villes différentes
+- 10 œuvres avec des statuts variés (FOR_SALE, SOLD, EXHIBITED)
+- 6 expositions réparties dans les galeries
+- 5 ateliers avec niveaux variés
+- 10 membres de la communauté
+- Des réservations croisées (plusieurs membres, plusieurs ateliers)
+- Des avis sur plusieurs œuvres
+- Respecte les clés étrangères et les contraintes UNIQUE
+Réponds uniquement avec le script SQL, sans commentaire ni balise markdown.
