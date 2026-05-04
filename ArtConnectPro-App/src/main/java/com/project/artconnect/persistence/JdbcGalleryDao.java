@@ -1,6 +1,7 @@
 package com.project.artconnect.persistence;
 
 import com.project.artconnect.dao.GalleryDao;
+import com.project.artconnect.model.Exhibition;
 import com.project.artconnect.model.Gallery;
 import com.project.artconnect.config.DatabaseConfig;
 
@@ -52,14 +53,33 @@ public class JdbcGalleryDao implements GalleryDao {
     public List<Gallery> findAll() {
 
         List<Gallery> list = new ArrayList<>();
-        String sql = "SELECT * FROM Gallery";
+        String sql = "SELECT g.*, e.title as ex_title, e.startDate, e.endDate, e.theme, e.curatorName " +
+                "FROM Gallery g " +
+                "LEFT JOIN Exhibition e ON g.id_gallery = e.id_gallery";
 
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql);
              ResultSet rs = stmt.executeQuery()) {
 
+            Gallery current = null;
             while (rs.next()) {
-                list.add(mapGallery(rs));
+                String name = rs.getString("name");
+                if (current == null || !current.getName().equals(name)) {
+                    current = mapGallery(rs);
+                    list.add(current);
+                }
+                String exTitle = rs.getString("ex_title");
+                if (exTitle != null) {
+                    Exhibition ex = new Exhibition();
+                    ex.setTitle(exTitle);
+                    ex.setStartDate(rs.getDate("startDate").toLocalDate());
+                    Date endDate = rs.getDate("endDate");
+                    if (endDate != null) ex.setEndDate(endDate.toLocalDate());
+                    ex.setTheme(rs.getString("theme"));
+                    ex.setCuratorName(rs.getString("curatorName"));
+                    ex.setGallery(current);
+                    current.getExhibitions().add(ex);
+                }
             }
 
         } catch (SQLException e) {
