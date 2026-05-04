@@ -1,46 +1,166 @@
 package com.project.artconnect.dao.impl;
 
 import com.project.artconnect.dao.ArtworkDao;
+import com.project.artconnect.model.Artist;
 import com.project.artconnect.model.Artwork;
 import com.project.artconnect.persistence.JdbcArtworkDao;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.sql.*;
 
 public class ArtworkDaoImpl implements ArtworkDao {
 
-    private JdbcArtworkDao jdbcArtworkDao = new JdbcArtworkDao();
+    private final JdbcArtworkDao jdbcArtworkDao = new JdbcArtworkDao();
+
+    private Artwork mapArtwork(ResultSet r) throws SQLException {
+        Artwork artwork = new Artwork();
+        artwork.setTitle(r.getString("title"));
+        artwork.setType(r.getString("type"));
+        artwork.setMedium(r.getString("medium"));
+        artwork.setPrice(r.getDouble("price"));
+        artwork.setStatus(Artwork.Status.valueOf(r.getString("status")));
+        Artist artist = new Artist();
+        artist.setName(r.getString("artist_name"));
+        artwork.setArtist(artist);
+
+        return artwork;
+    }
 
     @Override
     public List<Artwork> findAll() {
-        return jdbcArtworkDao.findAll();
+        List<Artwork> artworks = new ArrayList<>();
+        String sql =
+                "SELECT a.*, ar.name AS artist_name " +
+                        "FROM Artwork a " +
+                        "JOIN Artist ar ON a.id_artist = ar.id_artist";
+
+        try (Connection conn = jdbcArtworkDao.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql);
+             ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                artworks.add(mapArtwork(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException("Error fetching artworks ", e);
+        }
+
+        return artworks;
     }
 
     @Override
     public void save(Artwork artwork) {
-        if (artwork == null) {
-            throw new IllegalArgumentException("Artwork is null");
+
+        String findIdArtist = "SELECT id_artist FROM Artist WHERE name = ?";
+        String insertSql = "INSERT INTO Artwork (title, type, medium, price, status, id_artist) VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (Connection conn = jdbcArtworkDao.getConnection();
+             PreparedStatement findstmt = conn.prepareStatement(findIdArtist)) {
+
+            findstmt.setString(1, artwork.getArtist().getName());
+
+            ResultSet rs = findstmt.executeQuery();
+
+            if (!rs.next()) {
+                throw new RuntimeException("Artist not found");
+            }
+
+            int idArtist = rs.getInt("id_artist");
+
+            try (PreparedStatement stmt = conn.prepareStatement(insertSql)) {
+
+                stmt.setString(1, artwork.getTitle());
+                stmt.setString(2, artwork.getType());
+                stmt.setString(3, artwork.getMedium());
+                stmt.setDouble(4, artwork.getPrice());
+                stmt.setString(5, artwork.getStatus().name());
+                stmt.setInt(6, idArtist);
+
+                stmt.executeUpdate();
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-        jdbcArtworkDao.save(artwork);
     }
 
     @Override
     public void update(Artwork artwork) {
-        if (artwork == null) {
-            throw new IllegalArgumentException("Invalid artwork");
+        String findIdSql = "SELECT id_artist FROM Artist WHERE name = ?";
+        String sql = "UPDATE Artwork SET type=?, medium=?, price=?, status=?, id_artist=? WHERE title=?";
+
+        try (Connection conn = jdbcArtworkDao.getConnection();
+             PreparedStatement findStmt = conn.prepareStatement(findIdSql)) {
+
+            findStmt.setString(1, artwork.getArtist().getName());
+
+            ResultSet rs = findStmt.executeQuery();
+
+            if (!rs.next()) {
+                throw new RuntimeException("Artist not found");
+            }
+
+            int idArtist = rs.getInt("id_artist");
+
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+                stmt.setString(1, artwork.getType());
+                stmt.setString(2, artwork.getMedium());
+                stmt.setDouble(3, artwork.getPrice());
+                stmt.setString(4, artwork.getStatus().name());
+                stmt.setInt(5, idArtist);
+                stmt.setString(6, artwork.getTitle());
+
+                stmt.executeUpdate();
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-        jdbcArtworkDao.update(artwork);
     }
 
     @Override
     public void delete(String title) {
-        if (title == null) {
-            throw new IllegalArgumentException("Title is null");
+        String sql = "DELETE FROM Artwork WHERE title = ?";
+
+        try (Connection conn = jdbcArtworkDao.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, title);
+            stmt.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
         }
-        jdbcArtworkDao.delete(title);
     }
 
     @Override
     public List<Artwork> findByArtistName(String artistName) {
-        return jdbcArtworkDao.findByArtistName(artistName);
+        List<Artwork> list = new ArrayList<>();
+
+        String sql = "SELECT a.*, ar.name AS artist_name " +
+                "FROM Artwork a " +
+                "JOIN Artist ar ON a.id_artist = ar.id_artist " +
+                "WHERE ar.name = ?";
+
+        try (Connection conn = jdbcArtworkDao.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, artistName);
+
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                list.add(mapArtwork(rs));
+            }
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+        return list;
     }
+
 }
