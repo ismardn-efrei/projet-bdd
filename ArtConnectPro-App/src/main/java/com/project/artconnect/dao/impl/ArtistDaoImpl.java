@@ -2,6 +2,7 @@ package com.project.artconnect.dao.impl;
 
 import com.project.artconnect.dao.ArtistDao;
 import com.project.artconnect.model.Artist;
+import com.project.artconnect.model.Discipline;
 import com.project.artconnect.persistence.JdbcArtistDao;
 
 import java.util.List;
@@ -51,5 +52,10 @@ public class ArtistDaoImpl implements ArtistDao {
         } else {
             throw new IllegalArgumentException("City is null.");
         }
+    }
+
+    @Override
+    public List<Discipline> findAllDisciplines() {
+        return jdbcArtistDao.findAllDisciplines();
     }
 }
